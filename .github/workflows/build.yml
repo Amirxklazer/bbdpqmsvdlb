@@ -1,21 +1,32 @@
-name: Compile AOS 11
+name: Package AOS 11 Bootloader Config
 
 on: [push]
 
 jobs:
-  build_switch:
+  build_pack:
     runs-on: ubuntu-latest
-    container: devkitpro/devkita64
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Compile C Code
+    - name: Create Hekate Storage Hierarchy
       run: |
-        make
+        mkdir -p sd_card/bootloader/ini
+        mkdir -p sd_card/bootloader/res
+        
+        # Write out your standalone Hekate payload configuration profile block
+        cat << 'EOF' > sd_card/bootloader/ini/aos11.ini
+        [AOS 11 Operating System]
+        icon=bootloader/res/aos11_logo.bmp
+        payload=bootloader/payloads/aos11.bin
+        EOF
 
-    - name: Upload Result
+        # Draw a secure blank black placeholder icon box to prevent bootloader block crashes
+        pip install Pillow
+        python3 -c "from PIL import Image; placeholder = Image.new('RGB', (192, 192), color=(0,0,0)); placeholder.save('sd_card/bootloader/res/aos11_logo.bmp', format='BMP')"
+
+    - name: Archive Configurations
       uses: actions/upload-artifact@v4
       with:
-        name: AOS11_App
-        path: aos11.nro
+        name: AOS11_Hekate_Config
+        path: sd_card/
