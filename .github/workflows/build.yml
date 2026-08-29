@@ -1,32 +1,44 @@
-name: Package AOS 11 Bootloader Config
+name: Compile AOS 11 TUI Kernel
 
 on: [push]
 
 jobs:
-  build_pack:
+  build_kernel:
     runs-on: ubuntu-latest
+    container: devkitpro/devkita64
     steps:
-    - name: Checkout Code
+    - name: Checkout Your Repo
       uses: actions/checkout@v4
 
-    - name: Create Hekate Storage Hierarchy
+    - name: Clone TegraExplorer Engine
       run: |
-        mkdir -p sd_card/bootloader/ini
-        mkdir -p sd_card/bootloader/res
+        git clone --recursive https://github.com build_env
         
-        # Write out your standalone Hekate payload configuration profile block
-        cat << 'EOF' > sd_card/bootloader/ini/aos11.ini
-        [AOS 11 Operating System]
-        icon=bootloader/res/aos11_logo.bmp
-        payload=bootloader/payloads/aos11.bin
-        EOF
+    - name: Inject AOS Code
+      run: |
+        # Delete original file manager code
+        rm build_env/source/main.c
+        # Copy your AOS Terminal code into the source folder
+        cp aos_main.c build_env/source/main.c
 
-        # Draw a secure blank black placeholder icon box to prevent bootloader block crashes
-        pip install Pillow
-        python3 -c "from PIL import Image; placeholder = Image.new('RGB', (192, 192), color=(0,0,0)); placeholder.save('sd_card/bootloader/res/aos11_logo.bmp', format='BMP')"
+    - name: Compile Payload
+      run: |
+        cd build_env
+        make
 
-    - name: Archive Configurations
+    - name: Package for Switch
+      run: |
+        mkdir -p sd_card/bootloader/payloads
+        # Move the compiled binary and rename it
+        cp build_env/TegraExplorer.bin sd_card/bootloader/payloads/aos11_tui.bin
+        
+        # Create Hekate Config
+        mkdir -p sd_card/bootloader/ini
+        echo "[AOS 11 TUI]" > sd_card/bootloader/ini/aos11_tui.ini
+        echo "payload=bootloader/payloads/aos11_tui.bin" >> sd_card/bootloader/ini/aos11_tui.ini
+
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: AOS11_Hekate_Config
+        name: AOS11_TUI_System
         path: sd_card/
