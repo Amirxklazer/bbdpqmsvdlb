@@ -1,0 +1,21 @@
+name: Compile AOS 11
+
+on: [push]
+
+jobs:
+  build_switch:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Compile C Code
+      run: |
+        make
+
+    - name: Upload Result
+      uses: actions/upload-artifact@v4
+      with:
+        name: AOS11_App
+        path: aos11.nro
